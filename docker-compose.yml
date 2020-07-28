@@ -1,27 +1,38 @@
 version: "3"
 
 services:
-  spark: &basePy
+  notebook:
     build:
       context: .
-      dockerfile: ./docker-py/Dockerfile
+      dockerfile: ./dockerfiles/python/Dockerfile
     ports:
       - "8888:8888" #jupyter
-      - "8080:8080" #spark
       - "4040:4040" #spark job
-      - "4041:4041" #spark job
-      - "4042:4042" #spark job
-      - "4043:4043" #spark job
     volumes:
-      - ./dags:/app/dags
+      - ./notebooks:/app/dags
     restart: unless-stopped
     command: sh /jupyter_run.sh
 
   airflow:
-    <<: *basePy
-    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./dockerfiles/airflow/Dockerfile
     environment:
       - AIRFLOW_HOME=/app
     ports:
       - "8000:8000"
+    # extra_hosts:
+    #   - ""
+    # dns:
+    #   - 111
+    volumes:
+      - ./dags:/app/dags
+    restart: unless-stopped
     command: sh /airflow_run.sh
+
+  spark_yarn:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/spark_yarn/Dockerfile
+    restart: unless-stopped
+    command: sh /run.sh

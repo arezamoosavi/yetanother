@@ -28,18 +28,32 @@ RUN pip3 install jupyterlab
 RUN pip3 install pyspark
 ENV PYSPARK_PYTHON=/usr/bin/python3
 
+
 COPY requirements.txt /requirements.txt
 RUN pip3 install --no-cache-dir -r /requirements.txt
 
+RUN apt-get update && \
+    apt-get -y install sudo
+
+RUN useradd -m airflow && echo "airflow:airflow" | chpasswd && adduser airflow sudo
+
 RUN mkdir -p /app/dags
+RUN chown airflow /app
 
 WORKDIR /app
+
 COPY ./dags ./dags
 
-COPY docker-py/airflow.cfg /app/airflow.cfg
+COPY dockerfiles/airflow/airflow.cfg /app/airflow.cfg
+COPY spark/config/ ./
 
-COPY docker-py/jupyter_run.sh /jupyter_run.sh
-RUN chmod +x /jupyter_run.sh
+COPY dockerfiles/airflow/airflow_run.sh /airflow_run.sh
+RUN chmod 777 /airflow_run.sh
 
-COPY docker-py/airflow_run.sh /airflow_run.sh
-RUN chmod +x /airflow_run.sh
+# Copy Hadoop files and export path
+COPY spark/config /usr/bin/spark/config
+ENV YARN_CONF_DIR=/usr/bin/spark/config
+
+RUN chown airflow /usr/local
+
+USER airflow
